@@ -9,6 +9,8 @@ from datetime import datetime
 # Phase3 - Add session & state
 from google.adk.tools import ToolContext
 load_dotenv()
+# Phase4 - Multi agent
+
 
 def remember_name(name:str,tool_context:ToolContext) ->dict:
     """Saves the user's name to memory"""
@@ -21,13 +23,29 @@ def get_current_time() ->dict:
     return {"current_time":now}
 
 
+# Defining Agent
+greeting_agent= Agent(
+    name="greeting_agent",
+    model=LiteLlm(model="groq/qwen/qwen3.8-27b"),
+    description="Handles greeting and friendly small talk.",
+    instruction="You are warm and friendly.Greet the user kindly.",
+)
+
+time_agent=Agent(
+    name="time_agent",
+    model=LiteLlm(model="groq/qwen/qwen3.8-27b"),
+    description="Answer questions about the current date and time",
+    instruction="You tell the user the current time.Use your tools.",
+    tools=[get_current_time],
+)
+
 root_agent=Agent(
     name="my_agent",
     model=LiteLlm(model="groq/qwen/qwen3.8-27b"),
-    description="A simple assistant agent",
-    instruction="""You are a helpful assistant.Answer the user's question clearly.
-    Use your tools when relevant.
-    The user's name is {user_name?}.Greet them by name if you know it.
-    """,
-    tools=[get_current_time,remember_name],
+    description="Main router agent.",
+    instruction="""You are a router.Look at the user's request and hand it to the
+    right specilist.
+    Use greeting_agent for greetings and small task.
+    Use time_agent for anything about date and time.""",
+    sub_agents=[greeting_agent,time_agent],
 )
