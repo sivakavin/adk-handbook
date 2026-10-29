@@ -7,5 +7,6 @@ requires-python = ">=3.12"
 dependencies = [
     "google-adk>=2.13.0",
     "litellm==1.105.1",
+    "mcp[cli]>=1.9,<2",
     "python-dotenv>=1.2.4",
 ]
