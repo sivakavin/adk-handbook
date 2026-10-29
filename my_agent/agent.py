@@ -1,4 +1,5 @@
 
+import os
 import re
 from datetime import datetime
 from typing import Optional
@@ -10,6 +11,10 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.models import LlmRequest, LlmResponse
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools import ToolContext
+from google.adk.tools.mcp_tool import (
+    McpToolset,
+    StreamableHTTPConnectionParams,
+)
 from google.genai import types
 
 # --------------------------------------------------
@@ -164,6 +169,32 @@ time_agent = Agent(
 
 
 # --------------------------------------------------
+# Phase 6: Shop MCP server sub-agent
+# --------------------------------------------------
+
+SHOP_MCP_URL = os.getenv("SHOP_MCP_URL") or "http://127.0.0.1:8080/mcp"
+
+shop_toolset = McpToolset(
+    connection_params=StreamableHTTPConnectionParams(
+        url=SHOP_MCP_URL,
+        timeout=20,
+    ),
+)
+
+
+shop_agent = Agent(
+    name="shop_agent",
+    model=LiteLlm(model=MODEL),
+    description="Answers questions about shop items and their prices.",
+    instruction=(
+        "You answer questions about the shop. "
+        "Use the MCP tools get_price and list_item when needed."
+    ),
+    tools=[shop_toolset],
+)
+
+
+# --------------------------------------------------
 # Root agent: Router + PII guardrail
 # --------------------------------------------------
 
@@ -177,12 +208,14 @@ You are a router agent.
 Routing rules:
 1. Use greeting_agent for greetings and friendly small talk.
 2. Use time_agent for questions about the current date and time.
-3. Do not claim to have saved a user's name unless the
+3. Use shop_agent for questions about shop items or prices.
+4. Do not claim to have saved a user's name unless the
    remember_name tool has actually been called.
 """,
     sub_agents=[
         greeting_agent,
         time_agent,
+        shop_agent,
     ],
     before_model_callback=block_pii,
 )
