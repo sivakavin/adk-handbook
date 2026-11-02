@@ -2,3 +2,4 @@
 __pycache__/
 .venv/
 *.pyc
+my_agent/.adk/

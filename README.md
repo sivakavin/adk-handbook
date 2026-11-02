@@ -16,10 +16,12 @@ A small hands-on Google ADK (Agent Development Kit) project. It demonstrates:
 adk-handbbook/
 ├── main.py                  # Placeholder entry point
 ├── pyproject.toml            # Dependencies (uv managed)
+├── eval_config.json          # Eval criteria/thresholds for `adk eval`
 ├── .env                      # Local secrets / config (not committed)
 └── my_agent/
     ├── __init__.py           # Exposes `agent` package to ADK
     ├── agent.py              # Root agent, sub-agents, tools, guardrail
+    ├── shop.evalset.json     # Eval cases for the shop route
     ├── shop_server.py        # MCP server (FastMCP, streamable-http on :8080)
     └── test_shop_mcp.py      # Standalone MCP client smoke test
 ```
@@ -99,6 +101,72 @@ uv run python -m my_agent.test_shop_mcp get_price '{"item": "apple"}'
 uv run python -m my_agent.test_shop_mcp list_item
 ```
 
+## Evaluate
+
+`my_agent/shop.evalset.json` has three cases covering the shop route:
+
+| Eval id | Prompt | Expected route / tools |
+| --- | --- | --- |
+| `milk_price_test` | "What is the price of milk?" | `shop_agent` → `get_price("milk")` |
+| `banana_price_test` | "How much does a banana cost?" | `shop_agent` → `get_price("banana")` |
+| `list_items_test` | "What do you sell?" | `shop_agent` → `list_item()` |
+
+`eval_config.json` uses `tool_trajectory_avg_score` with `matchType: IN_ORDER`
+(the primary check: correct hand-off and tool arguments, extra calls allowed)
+and a lenient `response_match_score` of `0.5`, because wording varies between
+runs.
+
+### Prerequisite: the MCP server must be running
+
+Evals execute the real `shop_agent`, which connects to the MCP server. If it is
+not reachable at `SHOP_MCP_URL`, ADK logs
+`ConnectionError: ... All connection attempts failed`, then continues with
+`shop_agent` running **without tools**. The model may invent prices, so the
+cases fail.
+
+From the **repo root**, in Terminal 1:
+
+```powershell
+uv run python -m my_agent.shop_server
+```
+
+Leave that terminal open and confirm it is listening before starting the eval:
+
+```powershell
+Get-NetTCPConnection -LocalPort 8080 -State Listen
+```
+
+No output means the server is not running. If you changed `MCP_PORT`, update
+`SHOP_MCP_URL` to match. Then, from the repo root, in Terminal 2:
+
+```powershell
+# Windows consoles: prevents a UnicodeEncodeError if the model emits non-ASCII text
+$env:PYTHONIOENCODING = "utf-8"
+
+uv run adk eval my_agent my_agent/shop.evalset.json `
+  --config_file_path eval_config.json `
+  --print_detailed_results
+```
+
+Run these from the repository folder (the one containing `pyproject.toml`). If
+you see `PS C:\` in your prompt, `my_agent` and `uv` will not resolve to this
+project.
+
+The summary is printed to the console and each run is stored under
+`my_agent/.adk/eval_history/` (git-ignored). Evals can also be created and run
+from the **Eval** tab in `adk web`.
+
+To run only specific cases, append a comma-separated suffix:
+
+```powershell
+uv run adk eval my_agent my_agent/shop.evalset.json:milk_price_test,list_items_test `
+  --config_file_path eval_config.json
+```
+
+`tool_trajectory_avg_score` is the reliable gate. `response_match_score` is
+lexical overlap only, so a correct answer phrased very differently can still
+score low; use it as a soft signal, not an exact-match test.
+
 ## Example prompts
 
 | Prompt | Routed to |
@@ -106,10 +174,13 @@ uv run python -m my_agent.test_shop_mcp list_item
 | "Hi there, how are you?" | `greeting_agent` |
 | "What time is it?" | `time_agent` |
 | "How much is a banana?" / "What do you sell?" | `shop_agent` (MCP) |
+| "My name is Alex" | `root_agent` → `remember_name` (session state) |
 | "My email is someone@example.com" | blocked by the PII guardrail |
 
 ## Configuration notes
 
 - The model is set in `my_agent/agent.py` (`MODEL = "groq/qwen/qwen3.8-27b"`). Change it to any LiteLLM-supported Groq model, e.g. `groq/llama-3.3-70b-versatile`.
 - `shop_server.py` defaults to `127.0.0.1:8080`; the agent reads `SHOP_MCP_URL` to reach it.
-- ADK session data is stored in `my_agent/.adk/session.db` (generated at runtime).
+- The `google-adk[eval]` extra installs the evaluation CLI and metrics used by `adk eval`.
+- ADK session data is stored in `my_agent/.adk/session.db` and eval results in
+  `my_agent/.adk/eval_history/` (both generated at runtime and git-ignored).

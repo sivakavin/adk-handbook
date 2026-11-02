@@ -188,7 +188,10 @@ shop_agent = Agent(
     description="Answers questions about shop items and their prices.",
     instruction=(
         "You answer questions about the shop. "
-        "Use the MCP tools get_price and list_item when needed."
+        "Always call the MCP tools get_price or list_item to look up "
+        "facts; never guess or make up prices or items. "
+        "Reply in one short sentence, with no emojis, markdown, "
+        "bullet lists or follow-up offers."
     ),
     tools=[shop_toolset],
 )
@@ -209,9 +212,11 @@ Routing rules:
 1. Use greeting_agent for greetings and friendly small talk.
 2. Use time_agent for questions about the current date and time.
 3. Use shop_agent for questions about shop items or prices.
-4. Do not claim to have saved a user's name unless the
+4. Use the remember_name tool when the user tells you their name.
+5. Do not claim to have saved a user's name unless the
    remember_name tool has actually been called.
 """,
+    tools=[remember_name],
     sub_agents=[
         greeting_agent,
         time_agent,
