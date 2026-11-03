@@ -17,11 +17,13 @@ adk-handbbook/
 ├── main.py                  # Placeholder entry point
 ├── pyproject.toml            # Dependencies (uv managed)
 ├── .env                      # Local secrets / config (not committed)
-└── my_agent/
-    ├── __init__.py           # Exposes `agent` package to ADK
-    ├── agent.py              # Root agent, sub-agents, tools, guardrail
-    ├── shop_server.py        # MCP server (FastMCP, streamable-http on :8080)
-    └── test_shop_mcp.py      # Standalone MCP client smoke test
+├── my_agent/
+│   ├── __init__.py           # Exposes `agent` package to ADK
+│   └── agent.py              # Root agent, sub-agents, tools, guardrail
+└── shop_mcp/
+    ├── __init__.py           # MCP package
+    ├── server.py             # MCP server (FastMCP, streamable-http on :8080)
+    └── client.py             # Standalone MCP client smoke test
 ```
 
 ## Requirements
@@ -65,7 +67,7 @@ The shop agent needs its MCP server running, so start **two terminals**.
 ### Terminal 1 — MCP shop server
 
 ```powershell
-uv run python -m my_agent.shop_server
+uv run python -m shop_mcp.server
 ```
 
 Listens on `http://127.0.0.1:8080/mcp` (port 8080 is used to avoid clashing with `adk web`, which uses 8000).
@@ -92,11 +94,11 @@ With the shop server running:
 
 ```powershell
 # List available tools
-uv run python -m my_agent.test_shop_mcp
+uv run python -m shop_mcp.client
 
 # Call a tool with JSON arguments
-uv run python -m my_agent.test_shop_mcp get_price '{"item": "apple"}'
-uv run python -m my_agent.test_shop_mcp list_item
+uv run python -m shop_mcp.client get_price '{"item": "apple"}'
+uv run python -m shop_mcp.client list_item
 ```
 
 ## Example prompts
@@ -111,5 +113,5 @@ uv run python -m my_agent.test_shop_mcp list_item
 ## Configuration notes
 
 - The model is set in `my_agent/agent.py` (`MODEL = "groq/qwen/qwen3.8-27b"`). Change it to any LiteLLM-supported Groq model, e.g. `groq/llama-3.3-70b-versatile`.
-- `shop_server.py` defaults to `127.0.0.1:8080`; the agent reads `SHOP_MCP_URL` to reach it.
+- `shop_mcp/server.py` defaults to `127.0.0.1:8080`; the agent reads `SHOP_MCP_URL` to reach it.
 - ADK session data is stored in `my_agent/.adk/session.db` (generated at runtime).
