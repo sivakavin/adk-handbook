@@ -172,7 +172,8 @@ time_agent = Agent(
 # Phase 6: Shop MCP server sub-agent
 # --------------------------------------------------
 
-SHOP_MCP_URL = os.getenv("SHOP_MCP_URL") or "http://127.0.0.1:8080/mcp"
+# SHOP_MCP_URL = os.getenv("SHOP_MCP_URL") or "http://127.0.0.1:8080/mcp"
+SHOP_MCP_URL = os.getenv("SHOP_MCP_URL") or r"https://shop-agent-1090622122608.asia-south1.run.app/mcp"
 
 shop_toolset = McpToolset(
     connection_params=StreamableHTTPConnectionParams(
@@ -222,5 +223,6 @@ Routing rules:
         time_agent,
         shop_agent,
     ],
+    tools=[remember_name],
     before_model_callback=block_pii,
 )

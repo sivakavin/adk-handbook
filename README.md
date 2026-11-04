@@ -67,7 +67,7 @@ The shop agent needs its MCP server running, so start **two terminals**.
 ### Terminal 1 — MCP shop server
 
 ```powershell
-uv run python -m my_agent.shop_server
+uv run python -m shop_mcp.server
 ```
 
 Listens on `http://127.0.0.1:8080/mcp` (port 8080 is used to avoid clashing with `adk web`, which uses 8000).
@@ -94,11 +94,11 @@ With the shop server running:
 
 ```powershell
 # List available tools
-uv run python -m my_agent.test_shop_mcp
+uv run python -m shop_mcp.client
 
 # Call a tool with JSON arguments
-uv run python -m my_agent.test_shop_mcp get_price '{"item": "apple"}'
-uv run python -m my_agent.test_shop_mcp list_item
+uv run python -m shop_mcp.client get_price '{"item": "apple"}'
+uv run python -m shop_mcp.client list_item
 ```
 
 ## Evaluate
@@ -180,7 +180,5 @@ score low; use it as a soft signal, not an exact-match test.
 ## Configuration notes
 
 - The model is set in `my_agent/agent.py` (`MODEL = "groq/qwen/qwen3.8-27b"`). Change it to any LiteLLM-supported Groq model, e.g. `groq/llama-3.3-70b-versatile`.
-- `shop_server.py` defaults to `127.0.0.1:8080`; the agent reads `SHOP_MCP_URL` to reach it.
-- The `google-adk[eval]` extra installs the evaluation CLI and metrics used by `adk eval`.
-- ADK session data is stored in `my_agent/.adk/session.db` and eval results in
-  `my_agent/.adk/eval_history/` (both generated at runtime and git-ignored).
+- `shop_mcp/server.py` defaults to `127.0.0.1:8080`; the agent reads `SHOP_MCP_URL` to reach it.
+- ADK session data is stored in `my_agent/.adk/session.db` (generated at runtime).

@@ -1,20 +1,22 @@
 import os
-
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+port = int(os.environ.get("PORT", 8080))
 
-load_dotenv()
-
-MCP_HOST = os.getenv("MCP_HOST") or "127.0.0.1"
-MCP_PORT = int(os.getenv("MCP_PORT") or "8080")
-
-# Port 8080 avoids the clash with `adk web`, which uses 8000.
 mcp = FastMCP(
-    "shop",
-    host=MCP_HOST,
-    port=MCP_PORT,
+    "Shop MCP Server",
+    host="0.0.0.0",
+    port=port,
     streamable_http_path="/mcp",
 )
+
+# # Port 8080 avoids the clash with `adk web`, which uses 8000.
+# mcp = FastMCP(
+#     "shop",
+#     host=MCP_HOST,
+#     port=MCP_PORT,
+#     streamable_http_path="/mcp",
+# )
 
 
 @mcp.tool()
@@ -31,5 +33,6 @@ def list_item() -> dict:
 
 
 if __name__ == "__main__":
-    transport = os.getenv("MCP_TRANSPORT") or "streamable-http"
-    mcp.run(transport=transport)
+    mcp.run(transport="streamable-http")
+
+
